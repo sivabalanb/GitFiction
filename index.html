@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitFiction - Reverse GitHub History</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        input { padding: 8px; margin: 10px; }
+        button { padding: 10px; cursor: pointer; }
+        #output { margin-top: 20px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; }
+    </style>
+</head>
+<body>
+
+    <h1>GitFiction: Reverse Your GitHub History</h1>
+    <p>Enter your GitHub username to see an alternate reality of your commit timeline!</p>
+    <input type="text" id="githubUsername" placeholder="Enter GitHub username">
+    <button onclick="fetchCommits()">Generate Timeline</button>
+
+    <div id="output"></div>
+
+    <script>
+        async function fetchCommits() {
+            const username = document.getElementById("githubUsername").value;
+            if (!username) {
+                alert("Please enter a GitHub username!");
+                return;
+            }
+
+            const output = document.getElementById("output");
+            output.innerHTML = "<p>Loading commits...</p>";
+
+            try {
+                const response = await fetch(`https://api.github.com/users/${username}/events`);
+                if (!response.ok) throw new Error("GitHub user not found or API limit exceeded");
+
+                const events = await response.json();
+                const commits = events
+                    .filter(event => event.type === "PushEvent")
+                    .flatMap(event => event.payload.commits)
+                    .map(commit => ({
+                        message: commit.message,
+                        date: new Date(commit.timestamp || event.created_at),
+                    }));
+
+                if (commits.length === 0) {
+                    output.innerHTML = "<p>No commits found! Try another username.</p>";
+                    return;
+                }
+
+                // Reverse commit history for fun
+                const reversedCommits = commits.reverse();
+
+                output.innerHTML = `<h3>Reversed Commit History for ${username}</h3>`;
+                output.innerHTML += "<ul>" + reversedCommits.map(c => `<li><strong>${c.date.toDateString()}</strong>: ${c.message}</li>`).join("") + "</ul>";
+
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+
+</body>
+</html>
