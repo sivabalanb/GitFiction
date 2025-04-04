@@ -1,0 +1,47 @@
+name: 📜 Local AI Commit Story (No API)
+
+on:
+  workflow_dispatch:  # Allows manual trigger
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+
+jobs:
+  generate_story:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Allows pushing updates
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Python & AI Model
+        run: |
+          pip install transformers torch  # Install lightweight AI
+          echo "Installed AI dependencies."
+
+      - name: Get last 10 commits
+        run: |
+          git log --pretty=format:"%s" -n 10 > commits.txt
+          echo "✅ Collected commit messages."
+
+      - name: Generate AI-powered commit story (Locally)
+        run: |
+          python -c "
+          from transformers import pipeline
+          generator = pipeline('text-generation', model='distilgpt2')  
+          with open('commits.txt') as f:
+              commits = f.read()
+          prompt = f'Tell a fun story about these commits: {commits}'
+          story = generator(prompt, max_length=200, num_return_sequences=1)[0]['generated_text']
+          with open('generated_story.md', 'w') as out:
+              out.write(f'# 📜 AI-Generated Commit Story\n\n{story}')
+          "
+          echo "✅ Story generated!"
+
+      - name: Commit & Push Story
+        run: |
+          git add generated_story.md
+          git commit -m "🤖 AI-generated commit story (local)"
+          git push
